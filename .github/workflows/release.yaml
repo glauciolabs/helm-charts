@@ -1,0 +1,43 @@
+name: helmRelease
+
+on:
+  push:
+    branches:
+      - gh-pages
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: git config
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      - name: Get Token
+        id: get_workflow_token
+        uses: peter-murray/workflow-application-token-action@v3
+        with:
+          application_id: ${{ secrets.GIT_APP_ID }}
+          application_private_key: ${{ secrets.GIT_APP_KEY }}
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        env:
+          GITHUB_TOKEN: "${{ steps.get_workflow_token.outputs.token }}"
+
+      - name: run chart-releaser
+        uses: helm/chart-releaser-action@v1.6.0
+        with:
+          skip_existing: false
+          packages_with_index: true
+        env:
+          CR_TOKEN: "${{ steps.get_workflow_token.outputs.token }}"
+          
